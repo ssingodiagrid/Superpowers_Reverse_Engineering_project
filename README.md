@@ -1,28 +1,182 @@
 
+
 # Project 4 Reverse Engineering Report: Superpowers
 
 * **Project Name:** Superpowers
 * **Repository:** https://github.com/obra/superpowers
 * **Project Category:** Agent Workflow / Developer Tooling
 * **Deadline:** April 3rd, 2026
-* **Repository Snapshot Analyzed:** commit `b7a8f76` (`v5.0.7` branch tip at the time of analysis)
+
 
 ## 1. Project Overview and Key Components
 
 ### Repository Analysis Summary
-
 Superpowers is not a single application in the usual sense. It is a workflow layer for coding agents: a collection of skills, prompts, plugin manifests, hooks, and platform adapters that try to force a more disciplined software-development process. The top-level [README.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/README.md#L5) describes the intended flow clearly: brainstorm first, turn the approved design into a detailed plan, execute with either subagents or a simpler fallback, review the work, then finish on a branch rather than directly on the main line.
 
-The repository is organized around that workflow:
 
-- [skills/brainstorming/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/brainstorming/SKILL.md) defines the design phase.
-- [skills/writing-plans/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/writing-plans/SKILL.md) turns a design into tiny, executable steps.
-- [skills/subagent-driven-development/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/subagent-driven-development/SKILL.md) and [skills/executing-plans/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/executing-plans/SKILL.md) define two execution models.
-- [skills/requesting-code-review/code-reviewer.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/requesting-code-review/code-reviewer.md) and [agents/code-reviewer.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/agents/code-reviewer.md) define review behavior.
-- [.claude-plugin/plugin.json](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/.claude-plugin/plugin.json), [.cursor-plugin/plugin.json](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/.cursor-plugin/plugin.json), [gemini-extension.json](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/gemini-extension.json), [docs/README.codex.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/docs/README.codex.md), and [docs/README.opencode.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/docs/README.opencode.md) show that the project is intentionally multi-platform rather than tied to one agent harness.
-- [RELEASE-NOTES.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/RELEASE-NOTES.md#L18) is unusually important in this repo because the design rationale for several workflow changes is documented there explicitly, including the replacement of the old subagent review loop.
+**Main repository building blocks**
 
-In short, Superpowers is best understood as an algorithm for organizing agent behavior, not just as a library of instructions.
+- Design layer:
+  [skills/brainstorming/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/brainstorming/SKILL.md)
+- Planning layer:
+  [skills/writing-plans/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/writing-plans/SKILL.md)
+- Execution layer:
+  [skills/subagent-driven-development/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/subagent-driven-development/SKILL.md)
+  and
+  [skills/executing-plans/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/executing-plans/SKILL.md)
+- Review layer:
+  [skills/requesting-code-review/code-reviewer.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/requesting-code-review/code-reviewer.md)
+  and
+  [agents/code-reviewer.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/agents/code-reviewer.md)
+- Platform adapter layer:
+  [.claude-plugin/plugin.json](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/.claude-plugin/plugin.json),
+  [.cursor-plugin/plugin.json](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/.cursor-plugin/plugin.json),
+  [docs/README.codex.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/docs/README.codex.md),
+  [docs/README.opencode.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/docs/README.opencode.md),
+  [GEMINI.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/GEMINI.md)
+
+### Architecture and Workflow
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│                           SUPERPOWERS                               │
+│                 Agent Workflow Control Architecture                 │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  Platform Adapter Layer                                       │  │
+│  │  Claude plugin | Cursor plugin | Codex docs | OpenCode config │  │
+│  │  Gemini extension | hooks | tool-mapping references           │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                              │                                       │
+│                              ▼                                       │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  Workflow Policy Layer                                        │  │
+│  │  Brainstorming -> Writing Plans -> Execution -> Review ->     │  │
+│  │  Verification -> Branch Finish                                │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                              │                                       │
+│                              ▼                                       │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  Execution State Layer                                        │  │
+│  │  Design docs in docs/superpowers/specs/                       │  │
+│  │  Plan docs in docs/superpowers/plans/                         │  │
+│  │  Numbered tasks | file targets | commands | checkpoints       │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                              │                                       │
+│                              ▼                                       │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  Quality Control Layer                                        │  │
+│  │  Self-review checklists | TDD | code review | verification    │  │
+│  │  branch-safety rules | completion gates                       │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Architecture notes**
+
+- Control logic lives mainly in skill files, not in application code:
+  [README.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/README.md#L112)
+- Design and planning are persisted as explicit artifacts:
+  [skills/brainstorming/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/brainstorming/SKILL.md#L111),
+  [skills/writing-plans/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/writing-plans/SKILL.md#L18)
+- Review is built into the architecture instead of added after coding:
+  [skills/requesting-code-review/code-reviewer.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/requesting-code-review/code-reviewer.md#L63)
+- Platform integration is adapter-based, not one unified runtime:
+  [docs/README.codex.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/docs/README.codex.md),
+  [docs/README.opencode.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/docs/README.opencode.md)
+
+### High-Level Flow Diagram
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                     HIGH-LEVEL FLOW                          │
+└──────────────────────────────────────────────────────────────┘
+
+        User Request / Coding Goal
+                    │
+                    ▼
+      ┌──────────────────────────────┐
+      │ Startup Context + Skill Scan │
+      └──────────────────────────────┘
+                    │
+                    ▼
+      ┌──────────────────────────────┐
+      │ Brainstorming                │
+      │ - collect intent             │
+      │ - constrain scope            │
+      │ - shape architecture         │
+      └──────────────────────────────┘
+                    │
+                    ▼
+      ┌──────────────────────────────┐
+      │ Design in Digestible Sections│
+      │ + user approval gate         │
+      └──────────────────────────────┘
+             │                │
+        revise needed         approved
+             │                ▼
+             └───────► ┌──────────────────────────────┐
+                       │ Git Worktree / New Branch    │
+                       └──────────────────────────────┘
+                                       │
+                                       ▼
+                       ┌──────────────────────────────┐
+                       │ Writing Plans                │
+                       │ - numbered tasks             │
+                       │ - 2-5 minute steps           │
+                       │ - exact files and commands   │
+                       └──────────────────────────────┘
+                                       │
+                                       ▼
+                       ┌──────────────────────────────┐
+                       │ Plan Self-Review Checklist   │
+                       └──────────────────────────────┘
+                                       │
+                    ┌──────────────────┴──────────────────┐
+                    ▼                                     ▼
+      ┌──────────────────────────────┐    ┌──────────────────────────────┐
+      │ Subagent-Driven Development  │    │ Executing Plans              │
+      │ fresh subagent per task      │    │ direct plan execution path   │
+      └──────────────────────────────┘    └──────────────────────────────┘
+                    │                                     │
+                    └──────────────────┬──────────────────┘
+                                       ▼
+                       ┌──────────────────────────────┐
+                       │ Task Implementation          │
+                       │ with TDD and task boundaries │
+                       └──────────────────────────────┘
+                                       │
+                                       ▼
+                       ┌──────────────────────────────┐
+                       │ Code Review Against Plan     │
+                       │ severity-based issue check   │
+                       └──────────────────────────────┘
+                             │                │
+                         issues found        passes
+                             │                ▼
+                             └───────► ┌──────────────────────────────┐
+                                       │ Verification Before Complete │
+                                       └──────────────────────────────┘
+                                                       │
+                                                       ▼
+                                       ┌──────────────────────────────┐
+                                       │ Finish Branch / PR / Merge   │
+                                       └──────────────────────────────┘
+```
+
+**Flow sources**
+
+- Main system sequence:
+  [README.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/README.md#L5)
+- Numbered workflow steps:
+  [README.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/README.md#L112)
+- Planning handoff and task structure:
+  [skills/writing-plans/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/writing-plans/SKILL.md#L36)
+- Execution paths:
+  [skills/subagent-driven-development/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/subagent-driven-development/SKILL.md),
+  [skills/executing-plans/SKILL.md](https://github.com/obra/superpowers/blob/b7a8f76985f1e93e75dd2f2a3b424dc731bd9d37/skills/executing-plans/SKILL.md)
 
 ## 2. Deep Reasoning Questions & Analysis
 
