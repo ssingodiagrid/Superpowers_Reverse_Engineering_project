@@ -1,6 +1,3 @@
-# Confirm Deadline
-
-The final report deadline is April 3rd, 2026.
 
 # Project 4 Reverse Engineering Report: Superpowers
 
